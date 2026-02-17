@@ -165,6 +165,8 @@ def main():
         elif choice == '4':
             student_id = input("请输入学号: ")
             manager.show_student_detail(student_id)
+
+             
         
         elif choice == '5':
             print("感谢使用，再见！")

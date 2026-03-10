@@ -1,0 +1,35 @@
+import redis
+import threading
+import time
+
+def client1(r):
+    with r.pipeline() as pipe:
+        while True:
+            try:
+                pipe.watch('balance')
+                current_balance = int(pipe.get('balance') or 0)
+                pipe.multi()
+                pipe.set('balance', current_balance - 100)
+                pipe.execute()
+                print("Client1 事务成功")
+                break
+            except redis.WatchError:
+                print("Client1 检测到冲突，重试...")
+                continue
+
+def client2(r):
+    time.sleep(0.1)  # 确保 client1 先执行 WATCH
+    r.set('balance', 500)  # 修改被监控的键
+    print("Client2 修改了 balance")
+
+if __name__ == '__main__':
+    # 连接 Redis 时指定密码
+    r = redis.Redis(host='localhost', port=6379, password='314159', decode_responses=True)
+    r.set('balance', 1000)
+    t1 = threading.Thread(target=client1, args=(r,))
+    t2 = threading.Thread(target=client2, args=(r,))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    print("最终 balance:", r.get('balance'))
